@@ -3,396 +3,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniCloud OS | Secure Dashboard</title>
+    <title>OmniCloud OS | Professional Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         
-        :root {
-            --primary: #3b82f6;
-            --accent: #8b5cf6;
-            --bg: #020617;
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg);
-            color: #f1f5f9;
-            overflow-x: hidden;
-        }
-
-        .glass {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
-
-        .sidebar-link.active {
-            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, transparent 100%);
-            border-left: 4px solid var(--primary);
-            color: white;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
-        }
-
-        .key-overlay {
-            background: rgba(2, 6, 23, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 9999;
-        }
-
-        @keyframes pulse-border {
-            0% { border-color: rgba(59, 130, 246, 0.2); }
-            50% { border-color: rgba(59, 130, 246, 1); }
-            100% { border-color: rgba(59, 130, 246, 0.2); }
-        }
-
-        .processing-border {
-            animation: pulse-border 2s infinite;
-            border-width: 2px;
-        }
-
-        .mono { font-family: 'JetBrains Mono', monospace; }
+        :root { --primary: #3b82f6; --bg: #020617; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: white; overflow: hidden; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-btn.active { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary); color: white; }
+        .upload-area.drag { border-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
+        
+        /* Custom Animations */
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .loading-pulse { animation: pulse-soft 2s infinite; }
+        
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="h-screen flex">
 
-    <div id="keyOverlay" class="fixed inset-0 key-overlay flex items-center justify-center p-6 hidden">
-        <div class="max-w-md w-full glass p-8 rounded-[2.5rem] text-center border-blue-500/30">
+    <div id="lockScreen" class="fixed inset-0 z-[999] bg-slate-950 flex items-center justify-center p-6 hidden">
+        <div class="max-w-md w-full glass p-10 rounded-[3rem] text-center">
             <div class="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <i data-lucide="shield-alert" class="text-blue-500 w-10 h-10"></i>
+                <i data-lucide="shield-check" class="text-blue-500 w-10 h-10"></i>
             </div>
-            <h2 class="text-2xl font-extrabold mb-2">Zugriff verweigert</h2>
-            <p class="text-slate-400 text-sm mb-8">Dein GitHub Personal Access Token wird benötigt, um die Cloud-API zu steuern.</p>
-            <input type="password" id="keyInput" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4 mb-4 outline-none focus:border-blue-500 transition">
-            <button onclick="saveKey()" class="w-full btn-primary py-4 rounded-2xl font-bold shadow-lg">Key speichern & entsperren</button>
-            <p class="text-[10px] text-slate-600 mt-6 uppercase tracking-widest font-bold">Der Key wird nur lokal in deinem Browser gespeichert</p>
+            <h2 class="text-3xl font-black mb-2">Cloud Lock</h2>
+            <p class="text-slate-500 mb-8">Eingabe deines GitHub Tokens erforderlich.</p>
+            <input type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-4 outline-none focus:border-blue-500 transition-all">
+            <button onclick="unlock()" class="w-full bg-blue-600 py-4 rounded-2xl font-bold hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20">System entsperren</button>
         </div>
     </div>
 
-    <div class="flex h-screen overflow-hidden">
-        
-        <aside class="w-80 glass border-r border-white/5 flex flex-col p-8 hidden xl:flex">
-            <div class="flex items-center gap-4 mb-12">
-                <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <i data-lucide="cloud-lightning" class="text-white"></i>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-black tracking-tighter">OMNI<span class="text-blue-500">CLOUD</span></h1>
-                    <span class="text-[10px] font-mono text-slate-500">SECURE TERMINAL</span>
-                </div>
+    <aside class="w-72 glass border-r border-white/5 flex flex-col p-6 hidden lg:flex">
+        <div class="flex items-center gap-3 mb-12 px-2">
+            <div class="bg-blue-600 p-2 rounded-lg"><i data-lucide="box" class="w-6 h-6"></i></div>
+            <h1 class="text-xl font-black tracking-tighter">OMNI<span class="text-blue-500">CLOUD</span></h1>
+        </div>
+
+        <nav class="space-y-1 flex-1">
+            <p class="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-4 ml-2">Module</p>
+            <button onclick="changeModule('ARCHIVE', this)" class="sidebar-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white transition-all">
+                <i data-lucide="archive" class="w-5 h-5"></i> Archive Lab
+            </button>
+            <button onclick="changeModule('IMAGE', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white transition-all">
+                <i data-lucide="image" class="w-5 h-5"></i> Image Engine
+            </button>
+            <button onclick="changeModule('VIDEO', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white transition-all">
+                <i data-lucide="video" class="w-5 h-5"></i> Video Studio
+            </button>
+            <button onclick="changeModule('DOCS', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white transition-all">
+                <i data-lucide="file-text" class="w-5 h-5"></i> Document Pro
+            </button>
+        </nav>
+
+        <div class="mt-auto p-4 bg-slate-900/50 rounded-2xl border border-white/5">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-bold uppercase text-slate-400">API Connection OK</span>
             </div>
+            <button onclick="clearToken()" class="text-[10px] text-red-500 font-bold hover:underline">Token löschen</button>
+        </div>
+    </aside>
 
-            <nav class="space-y-2 flex-1">
-                <div class="text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-4 mt-8 ml-4">Engines</div>
-                <button onclick="switchCategory('ARCHIVE_TOOLS', this)" class="sidebar-link active w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
-                    <i data-lucide="archive" class="w-5 h-5"></i> Archive Lab
-                </button>
-                <button onclick="switchCategory('IMAGE_ENGINE', this)" class="sidebar-link w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
-                    <i data-lucide="image" class="w-5 h-5"></i> Image Engine
-                </button>
-                <button onclick="switchCategory('VIDEO_AUDIO_LAB', this)" class="sidebar-link w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
-                    <i data-lucide="film" class="w-5 h-5"></i> Media Studio
-                </button>
-                <button onclick="switchCategory('DOCUMENT_CONVERTER', this)" class="sidebar-link w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
-                    <i data-lucide="file-text" class="w-5 h-5"></i> Doc Converter
-                </button>
-            </nav>
-
-            <div class="pt-8 border-t border-white/5">
-                <button onclick="resetKey()" class="flex items-center gap-3 text-xs text-slate-500 hover:text-red-400 transition">
-                    <i data-lucide="log-out" class="w-4 h-4"></i> Session beenden / Key löschen
-                </button>
-            </div>
-        </aside>
-
-        <main class="flex-1 overflow-y-auto p-6 md:p-12">
+    <main class="flex-1 overflow-y-auto p-6 md:p-12">
+        <div class="max-w-5xl mx-auto space-y-10">
             
-            <div class="max-w-5xl mx-auto space-y-10">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 id="modTitle" class="text-5xl font-black italic tracking-tighter uppercase">Archive Lab</h2>
+                    <p class="text-slate-500 mt-2">Upload -> Processing -> Cloud Release</p>
+                </div>
+                <div id="globalStatus" class="hidden flex items-center gap-3 bg-blue-600/10 border border-blue-500/20 px-6 py-3 rounded-2xl text-blue-400 font-bold">
+                    <i data-lucide="loader-2" class="animate-spin w-4 h-4"></i>
+                    Cloud arbeitet... <span id="clock" class="font-mono ml-2">00:00</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-10">
                 
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400" id="userRepoLabel">Loading...</span>
+                <div class="xl:col-span-2 space-y-6">
+                    <div class="glass p-8 rounded-[3rem]">
+                        <div class="flex items-center gap-4 mb-8">
+                            <span class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">1</span>
+                            <h3 class="text-xl font-bold">Datei vorbereiten</h3>
+                        </div>
+
+                        <div id="dropZone" class="upload-area relative group border-2 border-dashed border-slate-800 rounded-[2rem] p-16 text-center transition-all cursor-pointer hover:border-blue-500/30">
+                            <input type="file" id="fileInput" class="hidden">
+                            <div class="group-hover:scale-110 transition-transform duration-500">
+                                <i data-lucide="upload-cloud" class="w-16 h-16 text-slate-700 mx-auto mb-4 group-hover:text-blue-500"></i>
+                            </div>
+                            <p id="fileLabel" class="text-lg font-bold text-slate-500 group-hover:text-slate-300">Zieh eine Datei hierher oder klicke</p>
+                            <p class="text-xs text-slate-600 mt-2 italic">Maximal 100MB pro File empfohlen</p>
+                        </div>
                     </div>
-                    <div class="flex gap-4">
-                        <button onclick="loadHistory()" class="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-white/5 transition">
-                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+
+                    <div class="glass p-8 rounded-[3rem]">
+                        <div class="flex items-center gap-4 mb-8">
+                            <span class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm">2</span>
+                            <h3 class="text-xl font-bold">Operation wählen</h3>
+                        </div>
+
+                        <div id="toolsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            </div>
+
+                        <button id="startBtn" onclick="initiateCloudProcess()" class="w-full mt-10 bg-white text-black py-5 rounded-[2rem] font-black text-xl flex items-center justify-center gap-4 hover:bg-blue-600 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-2xl">
+                            <i data-lucide="zap" class="fill-current"></i> PROZESS STARTEN
                         </button>
                     </div>
                 </div>
 
-                <section class="glass rounded-[3rem] p-10 relative overflow-hidden">
-                    <div id="processingIndicator" class="absolute inset-0 bg-blue-600/5 hidden flex flex-col items-center justify-center z-10 processing-border">
-                        <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p class="font-bold text-blue-400 animate-pulse">CLOUD ENGINE IS PROCESSING...</p>
-                        <div id="liveTimer" class="mt-2 text-2xl font-mono">00:00</div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                        <div class="space-y-6">
-                            <h2 class="text-4xl font-black tracking-tight" id="catTitle">ARCHIVE LAB</h2>
-                            <p class="text-slate-400 text-sm leading-relaxed">
-                                Stelle sicher, dass deine Dateien im Ordner <code class="bg-slate-800 px-2 py-1 rounded text-blue-400">/input</code> hochgeladen sind. 
-                                Wähle rechts eine Operation, um den GitHub-Server zu starten.
-                            </p>
-                            
-                            <div class="p-6 bg-slate-900/50 rounded-3xl border border-white/5 space-y-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                                        <i data-lucide="cpu" class="text-blue-500 w-5 h-5"></i>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-slate-500 uppercase">Server Instanz</p>
-                                        <p class="text-sm font-bold">Ubuntu Latest (High-Perf)</p>
-                                    </div>
-                                </div>
-                            </div>
+                <div class="space-y-6">
+                    <h3 class="text-sm font-black uppercase tracking-[0.2em] text-slate-500 ml-4">Cloud Results</h3>
+                    <div id="history" class="space-y-4 overflow-y-auto max-h-[700px] pr-2">
                         </div>
+                </div>
 
-                        <div class="space-y-4">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2">Operation wählen</label>
-                            <div id="toolsContainer" class="grid grid-cols-1 gap-3">
-                                </div>
-                            <button id="runBtn" onclick="executeTask()" class="w-full btn-primary py-5 rounded-3xl font-bold text-lg mt-4 flex items-center justify-center gap-3">
-                                <i data-lucide="play" class="fill-current w-5 h-5"></i> Prozess starten
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <div class="flex items-center gap-4 mb-8">
-                        <h3 class="text-xl font-bold uppercase tracking-widest">Recent Results</h3>
-                        <div class="h-[1px] flex-1 bg-white/5"></div>
-                    </div>
-                    
-                    <div id="historyGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        </div>
-                </section>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <script>
         lucide.createIcons();
 
-        // KONFIGURATION
-        const USER = "Aman-create-code";
-        const REPO = "YouTube-downloader";
-        const WORKFLOW_ID = "omnichub.yml";
+        const CONFIG = {
+            user: "Aman-create-code",
+            repo: "YouTube-downloader",
+            workflow: "hub-task.yml"
+        };
 
-        const TOOL_DB = {
-            ARCHIVE_TOOLS: [
-                { id: 'zip_all', name: 'ZIP Kompression', icon: 'package' },
-                { id: 'rar_to_zip', name: 'RAR zu ZIP', icon: 'file-archive' },
-                { id: 'encrypt_zip', name: 'Passwort-ZIP (Secure)', icon: 'lock' }
+        const MODULES = {
+            ARCHIVE: [
+                { id: 'zip_all', name: 'ZIP Kompression', desc: 'Packt alles zusammen', icon: 'package' },
+                { id: 'rar_to_zip', name: 'RAR zu ZIP', desc: 'Konvertierung', icon: 'file-archive' },
+                { id: 'encrypt_zip', name: 'Secure ZIP', desc: 'Passwort: Cloud123', icon: 'lock' }
             ],
-            IMAGE_ENGINE: [
-                { id: 'webp_80', name: 'WebP Optimizer', icon: 'zap' },
-                { id: 'resize_50', name: 'Resize 50%', icon: 'minimize' },
-                { id: 'watermark', name: 'Add Watermark', icon: 'stamp' }
+            IMAGE: [
+                { id: 'webp_80', name: 'WebP Optimizer', desc: 'Maximale Ersparnis', icon: 'zap' },
+                { id: 'resize_50', name: 'Resize 50%', desc: 'Dimensionen halbiert', icon: 'minimize-2' },
+                { id: 'bw_filter', name: 'B&W Filter', desc: 'Graustufen Konvertierung', icon: 'palette' }
             ],
-            VIDEO_AUDIO_LAB: [
-                { id: 'mp4_to_gif', name: 'Video zu GIF', icon: 'play' },
-                { id: 'extract_mp3', name: 'Extract Audio', icon: 'music' },
-                { id: 'compress_video', name: 'Reduce Size (HEVC)', icon: 'video' }
+            VIDEO: [
+                { id: 'mp4_to_gif', name: 'Video zu GIF', desc: 'Animierte Loops', icon: 'play' },
+                { id: 'compress_video', name: 'Kompression', desc: 'Dateigröße verringern', icon: 'film' },
+                { id: 'extract_audio', name: 'Audio Extrahieren', desc: 'MP3 Output', icon: 'music' }
             ],
-            DOCUMENT_CONVERTER: [
-                { id: 'pdf_merge', name: 'Merge all PDFs', icon: 'layers' },
-                { id: 'docx_to_pdf', name: 'Docx zu PDF', icon: 'file-text' },
-                { id: 'pdf_compress', name: 'PDF Shrink', icon: 'file-down' }
+            DOCS: [
+                { id: 'merge_pdf', name: 'PDF Merge', desc: 'Dateien zusammenfügen', icon: 'layers' },
+                { id: 'docx_to_pdf', name: 'Office zu PDF', desc: 'Format Konvertierung', icon: 'file-text' },
+                { id: 'clean_exif', name: 'Meta Data Wipe', desc: 'Anonymisierung', icon: 'shield' }
             ]
         };
 
-        let activeCat = 'ARCHIVE_TOOLS';
-        let selectedTool = '';
-        let timerVal = 0;
-        let timerInterval;
+        let currentFile = null;
+        let selectedTool = null;
+        let activeMod = 'ARCHIVE';
 
-        // KEY MANAGEMENT
+        // STARTUP
         window.onload = () => {
-            const savedKey = localStorage.getItem('omnicloud_key');
-            if (!savedKey) {
-                document.getElementById('keyOverlay').classList.remove('hidden');
+            if(!localStorage.getItem('gh_token')) {
+                document.getElementById('lockScreen').classList.remove('hidden');
             } else {
-                initApp();
+                renderTools();
+                fetchHistory();
             }
-            document.getElementById('userRepoLabel').innerText = `${USER} / ${REPO}`;
         };
 
-        function saveKey() {
-            const key = document.getElementById('keyInput').value;
-            if (key.startsWith('ghp_')) {
-                localStorage.setItem('omnicloud_key', key);
-                document.getElementById('keyOverlay').classList.add('hidden');
-                initApp();
-            } else {
-                alert("Bitte einen gültigen GitHub Token (ghp_...) eingeben.");
-            }
+        function unlock() {
+            const token = document.getElementById('tokenInput').value;
+            if(token.startsWith('ghp_')) {
+                localStorage.setItem('gh_token', token);
+                location.reload();
+            } else { alert("Ungültiger Token!"); }
         }
 
-        function resetKey() {
-            localStorage.removeItem('omnicloud_key');
-            location.reload();
-        }
+        function clearToken() { localStorage.removeItem('gh_token'); location.reload(); }
 
-        // APP LOGIC
-        function initApp() {
-            renderTools();
-            loadHistory();
-            lucide.createIcons();
-        }
-
-        function switchCategory(cat, btn) {
-            activeCat = cat;
-            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        // MODULE LOGIC
+        function changeModule(mod, btn) {
+            activeMod = mod;
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById('catTitle').innerText = cat.replace('_', ' ');
+            document.getElementById('modTitle').innerText = mod + " Lab";
             renderTools();
         }
 
         function renderTools() {
-            const container = document.getElementById('toolsContainer');
-            container.innerHTML = TOOL_DB[activeCat].map(t => `
-                <div onclick="selectTool('${t.id}', this)" class="tool-option glass p-4 rounded-2xl cursor-pointer flex items-center gap-4 border border-white/5 hover:border-blue-500/50 transition">
-                    <div class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center">
-                        <i data-lucide="${t.icon}" class="w-5 h-5 text-slate-400"></i>
+            const grid = document.getElementById('toolsGrid');
+            grid.innerHTML = MODULES[activeMod].map(tool => `
+                <div onclick="selectTool('${tool.id}', this)" class="tool-card glass p-6 rounded-3xl cursor-pointer border border-white/5 hover:border-blue-500 transition-all group">
+                    <div class="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
+                        <i data-lucide="${tool.icon}" class="w-6 h-6"></i>
                     </div>
-                    <span class="font-bold text-sm">${t.name}</span>
+                    <h4 class="font-bold">${tool.name}</h4>
+                    <p class="text-[10px] text-slate-500 mt-1">${tool.desc}</p>
                 </div>
             `).join('');
             lucide.createIcons();
-            selectedTool = '';
+            selectedTool = null;
         }
 
         function selectTool(id, el) {
-            document.querySelectorAll('.tool-option').forEach(o => o.classList.remove('border-blue-500'));
-            el.classList.add('border-blue-500');
+            document.querySelectorAll('.tool-card').forEach(c => c.style.borderColor = 'rgba(255,255,255,0.05)');
+            el.style.borderColor = '#3b82f6';
             selectedTool = id;
         }
 
-        async function executeTask() {
-            if (!selectedTool) return alert("Wähle zuerst eine Operation!");
-            
-            const key = localStorage.getItem('omnicloud_key');
-            const btn = document.getElementById('runBtn');
-            const loader = document.getElementById('processingIndicator');
+        // FILE HANDLING
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        function handleFile(file) {
+            if(!file) return;
+            currentFile = file;
+            document.getElementById('fileLabel').innerText = file.name;
+            document.getElementById('fileLabel').classList.replace('text-slate-500', 'text-blue-400');
+        }
+
+        // THE CORE PROCESS
+        async function initiateCloudProcess() {
+            if(!currentFile || !selectedTool) return alert("Datei und Operation wählen!");
+            const token = localStorage.getItem('gh_token');
+            const btn = document.getElementById('startBtn');
+            const status = document.getElementById('globalStatus');
 
             btn.disabled = true;
-            loader.classList.remove('hidden');
-            startTimer();
+            status.classList.remove('hidden');
+            startClock();
 
             try {
-                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${key}`,
-                        'Accept': 'application/vnd.github+json',
-                    },
-                    body: JSON.stringify({
-                        ref: 'main',
-                        inputs: { category: activeCat, action_type: selectedTool }
-                    })
-                });
+                // 1. UPLOAD
+                const reader = new FileReader();
+                reader.readAsDataURL(currentFile);
+                reader.onload = async () => {
+                    const base64 = reader.result.split(',')[1];
+                    await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/input/${currentFile.name}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ message: "Web-Upload", content: base64 })
+                    });
 
-                if (res.ok) {
-                    pollStatus(key);
-                } else {
-                    alert("API Fehler. Ist der Token noch gültig?");
-                    stopTask();
-                }
-            } catch (e) {
-                alert("Verbindungsfehler.");
-                stopTask();
-            }
+                    // 2. DISPATCH
+                    await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/actions/workflows/${CONFIG.workflow}/dispatches`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' },
+                        body: JSON.stringify({ ref: 'main', inputs: { task_type: selectedTool } })
+                    });
+
+                    pollReleases(token);
+                };
+            } catch (e) { alert("Fehler im Ablauf"); stopClock(); }
         }
 
-        function startTimer() {
-            timerVal = 0;
-            timerInterval = setInterval(() => {
-                timerVal++;
-                const m = Math.floor(timerVal/60).toString().padStart(2, '0');
-                const s = (timerVal%60).toString().padStart(2, '0');
-                document.getElementById('liveTimer').innerText = `${m}:${s}`;
-            }, 1000);
-        }
-
-        async function pollStatus(key) {
+        async function pollReleases(token) {
             const check = async () => {
-                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/releases`, {
-                    headers: { 'Authorization': `Bearer ${key}` }
+                const res = await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/releases`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
-                const latest = data[0];
-                
-                if (latest && (new Date() - new Date(latest.created_at)) < 30000) {
-                    stopTask();
-                    loadHistory();
-                    notifySuccess();
-                } else {
-                    setTimeout(check, 5000);
-                }
+                if(data[0] && (new Date() - new Date(data[0].created_at)) < 40000) {
+                    stopClock();
+                    fetchHistory();
+                    alert("CLOUD TASK COMPLETE!");
+                    document.getElementById('startBtn').disabled = false;
+                } else { setTimeout(check, 5000); }
             };
             check();
         }
 
-        function stopTask() {
-            clearInterval(timerInterval);
-            document.getElementById('processingIndicator').classList.add('hidden');
-            document.getElementById('runBtn').disabled = false;
+        async function fetchHistory() {
+            const res = await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/releases`);
+            const data = await res.json();
+            document.getElementById('history').innerHTML = data.slice(0, 10).map(rel => `
+                <div class="glass p-5 rounded-3xl border-l-4 border-blue-600 animate-in fade-in duration-500">
+                    <p class="text-[9px] font-mono text-slate-500 mb-2 uppercase">${new Date(rel.created_at).toLocaleString()}</p>
+                    <h5 class="text-xs font-bold truncate mb-4">${rel.name}</h5>
+                    <a href="${rel.assets[0]?.browser_download_url}" class="block text-center bg-slate-800 py-2 rounded-xl text-[10px] font-bold hover:bg-white hover:text-black transition-all">DOWNLOAD</a>
+                </div>
+            `).join('');
         }
 
-        async function loadHistory() {
-            const container = document.getElementById('historyGrid');
-            const key = localStorage.getItem('omnicloud_key');
-            
-            try {
-                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/releases`, {
-                    headers: { 'Authorization': `Bearer ${key}` }
-                });
-                const data = await res.json();
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = `<div class="col-span-full py-20 text-center glass rounded-3xl text-slate-600 italic">Keine Cloud-Ergebnisse gefunden.</div>`;
-                    return;
-                }
-
-                container.innerHTML = data.slice(0, 9).map(rel => `
-                    <div class="glass p-6 rounded-[2rem] border-l-4 border-blue-500 hover:scale-[1.02] transition duration-300">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 uppercase tracking-tighter">SUCCESS</span>
-                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${new Date(rel.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <h4 class="font-bold text-sm mb-4 truncate w-full">${rel.name}</h4>
-                        <a href="${rel.assets[0]?.browser_download_url || '#'}" class="w-full py-3 bg-white text-black rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white transition">
-                            <i data-lucide="download" class="w-3 h-3"></i> DOWNLOAD
-                        </a>
-                    </div>
-                `).join('');
-                lucide.createIcons();
-            } catch (e) {}
+        let clockInt;
+        function startClock() {
+            let s = 0;
+            clockInt = setInterval(() => {
+                s++;
+                const min = Math.floor(s/60).toString().padStart(2, '0');
+                const sec = (s%60).toString().padStart(2, '0');
+                document.getElementById('clock').innerText = min + ":" + sec;
+            }, 1000);
         }
-
-        function notifySuccess() {
-            const n = document.createElement('div');
-            n.className = "fixed top-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-10 py-5 rounded-3xl font-bold shadow-2xl z-[10000] animate-bounce";
-            n.innerHTML = `<div class="flex items-center gap-3"><i data-lucide="check-circle"></i> TASK COMPLETE! FILE READY.</div>`;
-            document.body.appendChild(n);
-            lucide.createIcons();
-            setTimeout(() => n.remove(), 4000);
+        function stopClock() {
+            clearInterval(clockInt);
+            document.getElementById('globalStatus').classList.add('hidden');
         }
     </script>
-
 </body>
 </html>
