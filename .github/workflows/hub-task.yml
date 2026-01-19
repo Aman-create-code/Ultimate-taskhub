@@ -1,71 +1,154 @@
-name: Universal Cloud Hub Task
+name: OmniCloud Universal Converter
 
 on:
   workflow_dispatch:
     inputs:
-      task_type:
-        description: 'Was willst du tun?'
+      category:
+        description: 'Werkzeug-Kategorie'
         required: true
         type: choice
         options:
-          - 'ARCHIVE: Alle Dateien zu .zip'
-          - 'ARCHIVE: .rar zu .zip konvertieren'
-          - 'IMAGE: Alle zu WebP (80% Qualität)'
-          - 'IMAGE: Größe halbieren (50% Scale)'
-          - 'IMAGE: Schwarz-Weiß Filter'
-          - 'VIDEO: MP4 zu GIF'
-          - 'DOC: PDF zu Word (.docx)'
-          - 'DOC: Markdown zu PDF'
-      input_files:
-        description: 'Dateinamen in /input (oder leer lassen für alle)'
-        required: false
+          - ARCHIVE_TOOLS
+          - IMAGE_ENGINE
+          - VIDEO_AUDIO_LAB
+          - DOCUMENT_CONVERTER
+          - SECURITY_METADATA
+      action_type:
+        description: 'Spezifische Operation'
+        required: true
+        type: string
+        default: 'convert_to_zip'
 
 jobs:
   process:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
+    
     steps:
-      - name: Checkout
+      - name: 🛠️ System Vorbereitung
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: 📦 Installation der Power-Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y imagemagick webp p7zip-full ffmpeg pandoc ghostscript unrar
+          sudo apt-get install -y \
+            imagemagick webp p7zip-full ffmpeg pandoc ghostscript unrar \
+            poppler-utils libimage-exiftool-perl qpdf libreoffice \
+            ffmpeg vlc-bin optipng jpegoptim
+          
+          # ImageMagick Sicherheitseinstellungen für PDF lockern
+          sudo sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml
 
-      - name: Execute Task
+      - name: 🚀 OmniCloud Processing Engine
+        id: engine
         run: |
           mkdir -p output
-          case "${{ github.event.inputs.task_type }}" in
-            "ARCHIVE: Alle Dateien zu .zip")
-              7z a -tzip output/archive.zip ./input/*
-              ;;
-            "ARCHIVE: .rar zu .zip konvertieren")
-              unrar x input/*.rar temp_unrar/
-              7z a -tzip output/converted_rar.zip ./temp_unrar/*
-              ;;
-            "IMAGE: Alle zu WebP (80% Qualität)")
-              for f in input/*.{jpg,png,jpeg}; do [ -e "$f" ] && cwebp -q 80 "$f" -o "output/$(basename "${f%.*}").webp"; done
-              ;;
-            "IMAGE: Größe halbieren (50% Scale)")
-              for f in input/*.{jpg,png,jpeg}; do [ -e "$f" ] && convert "$f" -resize 50% "output/resized_$(basename "$f")"; done
-              ;;
-            "VIDEO: MP4 zu GIF")
-              ffmpeg -i input/*.mp4 -vf "fps=10,scale=480:-1:flags=lanczos" output/video_to.gif
-              ;;
-            "DOC: PDF zu Word (.docx)")
-              pandoc input/*.pdf -o output/document.docx
-              ;;
-          esac
+          INPUT_DIR="./input"
+          CATEGORY="${{ github.event.inputs.category }}"
+          ACTION="${{ github.event.inputs.action_type }}"
+          
+          echo "Starte Task: $CATEGORY -> $ACTION"
 
-      - name: Create Release
+          # ---------------------------------------------------------
+          # KATEGORIE: ARCHIVE_TOOLS
+          # ---------------------------------------------------------
+          if [ "$CATEGORY" == "ARCHIVE_TOOLS" ]; then
+            case "$ACTION" in
+              "zip_all") 7z a -tzip output/archive.zip $INPUT_DIR/* ;;
+              "rar_to_zip") unrar x $INPUT_DIR/*.rar temp/ && 7z a -tzip output/converted.zip ./temp/* ;;
+              "7z_to_zip") 7z x $INPUT_DIR/*.7z -otemp/ && 7z a -tzip output/converted.zip ./temp/* ;;
+              "tar_gz") tar -cvzf output/archive.tar.gz $INPUT_DIR/* ;;
+              "encrypt_zip") 7z a -tzip -p"CloudHub123" output/secure.zip $INPUT_DIR/* ;;
+              "split_zip") 7z a -tzip -v10m output/split_archive.zip $INPUT_DIR/* ;;
+            esac
+          fi
+
+          # ---------------------------------------------------------
+          # KATEGORIE: IMAGE_ENGINE
+          # ---------------------------------------------------------
+          if [ "$CATEGORY" == "IMAGE_ENGINE" ]; then
+            for f in $INPUT_DIR/*; do
+              [ -e "$f" ] || continue
+              filename=$(basename "$f")
+              name="${filename%.*}"
+              case "$ACTION" in
+                "webp_80") cwebp -q 80 "$f" -o "output/$name.webp" ;;
+                "webp_lossless") cwebp -lossless "$f" -o "output/$name.webp" ;;
+                "resize_50") convert "$f" -resize 50% "output/small_$filename" ;;
+                "compress_jpg") jpegoptim -d output/ -m80 "$f" ;;
+                "optimize_png") optipng -out "output/$filename" "$f" ;;
+                "grayscale") convert "$f" -colorspace Gray "output/bw_$filename" ;;
+                "to_png") convert "$f" "output/$name.png" ;;
+                "to_jpg") convert "$f" "output/$name.jpg" ;;
+                "watermark") convert "$f" -pointsize 40 -fill white -gravity center -annotate +0+0 'OmniCloud' "output/wm_$filename" ;;
+                "thumbnail") convert "$f" -thumbnail 200x200 "output/thumb_$filename" ;;
+              esac
+            done
+          fi
+
+          # ---------------------------------------------------------
+          # KATEGORIE: VIDEO_AUDIO_LAB
+          # ---------------------------------------------------------
+          if [ "$CATEGORY" == "VIDEO_AUDIO_LAB" ]; then
+            for f in $INPUT_DIR/*; do
+              [ -e "$f" ] || continue
+              filename=$(basename "$f")
+              name="${filename%.*}"
+              case "$ACTION" in
+                "mp4_to_gif") ffmpeg -i "$f" -vf "fps=10,scale=480:-1" "output/$name.gif" ;;
+                "extract_mp3") ffmpeg -i "$f" -q:a 0 -map a "output/$name.mp3" ;;
+                "compress_video") ffmpeg -i "$f" -vcodec libx265 -crf 28 "output/small_$filename" ;;
+                "to_avi") ffmpeg -i "$f" "output/$name.avi" ;;
+                "mute_video") ffmpeg -i "$f" -an -vcodec copy "output/muted_$filename" ;;
+                "fast_motion") ffmpeg -i "$f" -filter:v "setpts=0.5*PTS" "output/fast_$filename" ;;
+              esac
+            done
+          fi
+
+          # ---------------------------------------------------------
+          # KATEGORIE: DOCUMENT_CONVERTER
+          # ---------------------------------------------------------
+          if [ "$CATEGORY" == "DOCUMENT_CONVERTER" ]; then
+            for f in $INPUT_DIR/*; do
+              [ -e "$f" ] || continue
+              filename=$(basename "$f")
+              name="${filename%.*}"
+              case "$ACTION" in
+                "pdf_to_images") pdftoppm -png "$f" "output/$name" ;;
+                "pdf_merge") pdfunite $INPUT_DIR/*.pdf output/merged.pdf ;;
+                "pdf_compress") gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dQUIET -dBATCH -sOutputFile="output/small_$filename" "$f" ;;
+                "md_to_pdf") pandoc "$f" -o "output/$name.pdf" ;;
+                "docx_to_pdf") libreoffice --headless --convert-to pdf "$f" --outdir output/ ;;
+                "pdf_to_txt") pdftotext "$f" "output/$name.txt" ;;
+              esac
+            done
+          fi
+
+          # ---------------------------------------------------------
+          # KATEGORIE: SECURITY_METADATA
+          # ---------------------------------------------------------
+          if [ "$CATEGORY" == "SECURITY_METADATA" ]; then
+            for f in $INPUT_DIR/*; do
+              [ -e "$f" ] || continue
+              filename=$(basename "$f")
+              case "$ACTION" in
+                "strip_exif") exiftool -all= -o "output/clean_$filename" "$f" ;;
+                "show_info") exiftool "$f" > "output/${filename}_info.txt" ;;
+                "pdf_lock") qpdf --encrypt "UserPass" "OwnerPass" 256 -- "$f" "output/locked_$filename" ;;
+              esac
+            done
+          fi
+
+      - name: 📤 Release bereitstellen
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: task-${{ github.run_number }}
-          name: Fertiger Task #${{ github.run_number }}
+          tag_name: build-${{ github.run_number }}
+          name: Cloud-Ergebnis #${{ github.run_number }}
           files: output/*
-          body: "Dein Auftrag wurde bearbeitet: ${{ github.event.inputs.task_type }}"
+          body: |
+            ✅ Task erfolgreich abgeschlossen!
+            📂 Kategorie: ${{ github.event.inputs.category }}
+            ⚙️ Operation: ${{ github.event.inputs.action_type }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
