@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniCloud | Advanced Task Hub</title>
+    <title>OmniCloud OS | Secure Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -11,162 +11,174 @@
         
         :root {
             --primary: #3b82f6;
-            --bg-dark: #020617;
-            --card-bg: rgba(30, 41, 59, 0.5);
+            --accent: #8b5cf6;
+            --bg: #020617;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-dark);
+            background-color: var(--bg);
             color: #f1f5f9;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0, transparent 50%);
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, transparent 100%);
+            border-left: 4px solid var(--primary);
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .key-overlay {
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: rgba(59, 130, 246, 0.2); }
+            50% { border-color: rgba(59, 130, 246, 1); }
+            100% { border-color: rgba(59, 130, 246, 0.2); }
+        }
+
+        .processing-border {
+            animation: pulse-border 2s infinite;
+            border-width: 2px;
         }
 
         .mono { font-family: 'JetBrains Mono', monospace; }
-        
-        .glass-panel {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-
-        .tool-btn {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tool-btn:hover {
-            transform: scale(1.02);
-            background: rgba(59, 130, 246, 0.2);
-            border-color: var(--primary);
-        }
-
-        .sidebar-item.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-        }
-
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-
-        .scan-line {
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--primary), transparent);
-            animation: scan 3s linear infinite;
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen">
 
+    <div id="keyOverlay" class="fixed inset-0 key-overlay flex items-center justify-center p-6 hidden">
+        <div class="max-w-md w-full glass p-8 rounded-[2.5rem] text-center border-blue-500/30">
+            <div class="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="shield-alert" class="text-blue-500 w-10 h-10"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold mb-2">Zugriff verweigert</h2>
+            <p class="text-slate-400 text-sm mb-8">Dein GitHub Personal Access Token wird benötigt, um die Cloud-API zu steuern.</p>
+            <input type="password" id="keyInput" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-slate-900 border border-slate-700 rounded-2xl px-6 py-4 mb-4 outline-none focus:border-blue-500 transition">
+            <button onclick="saveKey()" class="w-full btn-primary py-4 rounded-2xl font-bold shadow-lg">Key speichern & entsperren</button>
+            <p class="text-[10px] text-slate-600 mt-6 uppercase tracking-widest font-bold">Der Key wird nur lokal in deinem Browser gespeichert</p>
+        </div>
+    </div>
+
     <div class="flex h-screen overflow-hidden">
         
-        <aside class="w-72 glass-panel border-r border-white/5 flex flex-col p-6 hidden lg:flex">
-            <div class="flex items-center gap-3 mb-10 px-2">
-                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-                    <i data-lucide="layers" class="text-white w-6 h-6"></i>
+        <aside class="w-80 glass border-r border-white/5 flex flex-col p-8 hidden xl:flex">
+            <div class="flex items-center gap-4 mb-12">
+                <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
+                    <i data-lucide="cloud-lightning" class="text-white"></i>
                 </div>
                 <div>
-                    <h1 class="font-extrabold text-xl tracking-tighter">OmniCloud</h1>
-                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-widest">v2.0 Enterprise</p>
+                    <h1 class="text-2xl font-black tracking-tighter">OMNI<span class="text-blue-500">CLOUD</span></h1>
+                    <span class="text-[10px] font-mono text-slate-500">SECURE TERMINAL</span>
                 </div>
             </div>
 
-            <nav class="flex-1 space-y-2">
-                <button onclick="setCategory('ARCHIVE_TOOLS', this)" class="sidebar-item w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-400 font-semibold transition active">
+            <nav class="space-y-2 flex-1">
+                <div class="text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-4 mt-8 ml-4">Engines</div>
+                <button onclick="switchCategory('ARCHIVE_TOOLS', this)" class="sidebar-link active w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
                     <i data-lucide="archive" class="w-5 h-5"></i> Archive Lab
                 </button>
-                <button onclick="setCategory('IMAGE_ENGINE', this)" class="sidebar-item w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-400 font-semibold transition">
+                <button onclick="switchCategory('IMAGE_ENGINE', this)" class="sidebar-link w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
                     <i data-lucide="image" class="w-5 h-5"></i> Image Engine
                 </button>
-                <button onclick="setCategory('VIDEO_AUDIO_LAB', this)" class="sidebar-item w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-400 font-semibold transition">
+                <button onclick="switchCategory('VIDEO_AUDIO_LAB', this)" class="sidebar-link w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
                     <i data-lucide="film" class="w-5 h-5"></i> Media Studio
                 </button>
-                <button onclick="setCategory('DOCUMENT_CONVERTER', this)" class="sidebar-item w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-400 font-semibold transition">
+                <button onclick="switchCategory('DOCUMENT_CONVERTER', this)" class="sidebar-link w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition font-bold text-sm">
                     <i data-lucide="file-text" class="w-5 h-5"></i> Doc Converter
-                </button>
-                <button onclick="setCategory('SECURITY_METADATA', this)" class="sidebar-item w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-400 font-semibold transition">
-                    <i data-lucide="shield-check" class="w-5 h-5"></i> Privacy Tools
                 </button>
             </nav>
 
-            <div class="mt-auto p-4 bg-slate-800/50 rounded-2xl border border-white/5">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-2">System Status</p>
-                <div class="flex items-center gap-2 text-xs text-green-400">
-                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    GitHub Runner Online
-                </div>
+            <div class="pt-8 border-t border-white/5">
+                <button onclick="resetKey()" class="flex items-center gap-3 text-xs text-slate-500 hover:text-red-400 transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Session beenden / Key löschen
+                </button>
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto relative">
+        <main class="flex-1 overflow-y-auto p-6 md:p-12">
             
-            <header class="lg:hidden p-6 glass-panel sticky top-0 z-50 flex justify-between items-center">
-                <h1 class="font-black text-xl">OmniCloud</h1>
-                <button class="p-2 bg-slate-800 rounded-xl"><i data-lucide="menu"></i></button>
-            </header>
-
-            <div class="p-6 md:p-12 max-w-5xl mx-auto space-y-12 pb-32">
+            <div class="max-w-5xl mx-auto space-y-10">
                 
-                <section class="relative group">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-                    <div class="relative glass-panel rounded-[2.5rem] p-8 md:p-12 overflow-hidden">
-                        <div class="scan-line absolute top-0 left-0 w-full opacity-20"></div>
-                        <div class="flex flex-col md:flex-row justify-between items-center gap-8">
-                            <div class="space-y-4">
-                                <h2 id="activeCategoryName" class="text-4xl md:text-5xl font-black italic tracking-tighter">ARCHIVE LAB</h2>
-                                <p class="text-slate-400 max-w-md">Lade deine Dateien in den <code>/input</code> Ordner deines Repos und wähle rechts die gewünschte Operation.</p>
-                                <div class="flex gap-4 pt-4">
-                                    <a id="actionTrigger" href="#" target="_blank" class="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 transition shadow-xl shadow-blue-600/30">
-                                        <i data-lucide="zap"></i> Task starten
-                                    </a>
-                                    <button onclick="refreshHistory()" class="bg-slate-800 text-white px-6 py-4 rounded-2xl font-bold hover:bg-slate-700 transition">
-                                        <i data-lucide="refresh-cw"></i>
-                                    </button>
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400" id="userRepoLabel">Loading...</span>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="loadHistory()" class="w-10 h-10 glass rounded-xl flex items-center justify-center hover:bg-white/5 transition">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <section class="glass rounded-[3rem] p-10 relative overflow-hidden">
+                    <div id="processingIndicator" class="absolute inset-0 bg-blue-600/5 hidden flex flex-col items-center justify-center z-10 processing-border">
+                        <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p class="font-bold text-blue-400 animate-pulse">CLOUD ENGINE IS PROCESSING...</p>
+                        <div id="liveTimer" class="mt-2 text-2xl font-mono">00:00</div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <div class="space-y-6">
+                            <h2 class="text-4xl font-black tracking-tight" id="catTitle">ARCHIVE LAB</h2>
+                            <p class="text-slate-400 text-sm leading-relaxed">
+                                Stelle sicher, dass deine Dateien im Ordner <code class="bg-slate-800 px-2 py-1 rounded text-blue-400">/input</code> hochgeladen sind. 
+                                Wähle rechts eine Operation, um den GitHub-Server zu starten.
+                            </p>
+                            
+                            <div class="p-6 bg-slate-900/50 rounded-3xl border border-white/5 space-y-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                                        <i data-lucide="cpu" class="text-blue-500 w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-slate-500 uppercase">Server Instanz</p>
+                                        <p class="text-sm font-bold">Ubuntu Latest (High-Perf)</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="hidden md:block w-48 h-48 bg-slate-900 rounded-full border-4 border-blue-600/20 flex items-center justify-center relative">
-                                <div class="absolute inset-4 border-2 border-dashed border-blue-500/30 rounded-full animate-spin-slow"></div>
-                                <i id="activeCategoryIcon" data-lucide="archive" class="w-16 h-16 text-blue-500"></i>
-                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2">Operation wählen</label>
+                            <div id="toolsContainer" class="grid grid-cols-1 gap-3">
+                                </div>
+                            <button id="runBtn" onclick="executeTask()" class="w-full btn-primary py-5 rounded-3xl font-bold text-lg mt-4 flex items-center justify-center gap-3">
+                                <i data-lucide="play" class="fill-current w-5 h-5"></i> Prozess starten
+                            </button>
                         </div>
                     </div>
                 </section>
 
                 <section>
-                    <div class="flex items-center justify-between mb-8">
-                        <h3 class="text-xl font-bold flex items-center gap-3">
-                            <i data-lucide="grid" class="text-blue-500"></i> Verfügbare Module
-                        </h3>
-                        <span id="moduleCount" class="text-xs font-mono bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">6 MODULE</span>
+                    <div class="flex items-center gap-4 mb-8">
+                        <h3 class="text-xl font-bold uppercase tracking-widest">Recent Results</h3>
+                        <div class="h-[1px] flex-1 bg-white/5"></div>
                     </div>
-
-                    <div id="toolsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+                    <div id="historyGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         </div>
-                </section>
-
-                <section>
-                    <h3 class="text-xl font-bold mb-6 flex items-center gap-3">
-                        <i data-lucide="clock" class="text-slate-500"></i> Letzte Cloud-Prozesse
-                    </h3>
-                    <div id="historyList" class="space-y-4">
-                        <div class="animate-pulse flex gap-4 p-6 glass-panel rounded-3xl">
-                            <div class="w-12 h-12 bg-slate-800 rounded-xl"></div>
-                            <div class="flex-1 space-y-2">
-                                <div class="h-4 bg-slate-800 rounded w-1/4"></div>
-                                <div class="h-3 bg-slate-800 rounded w-1/2"></div>
-                            </div>
-                        </div>
-                    </div>
                 </section>
             </div>
         </main>
@@ -176,140 +188,211 @@
         lucide.createIcons();
 
         // KONFIGURATION
-        const GITHUB_USER = "Aman-create-code";
-        const GITHUB_REPO = "YouTube-downloader"; // Du kannst den Repo-Namen hier anpassen
+        const USER = "Aman-create-code";
+        const REPO = "YouTube-downloader";
+        const WORKFLOW_ID = "omnichub.yml";
 
-        const TOOLS = {
+        const TOOL_DB = {
             ARCHIVE_TOOLS: [
-                { id: 'zip_all', name: 'ZIP Kompression', desc: 'Packt alles in input/', icon: 'package' },
-                { id: 'rar_to_zip', name: 'RAR zu ZIP', desc: 'Entpackt RAR, packt ZIP', icon: 'file-archive' },
-                { id: '7z_to_zip', name: '7Z zu ZIP', desc: 'Konvertiert 7-Zip Archive', icon: 'zip' },
-                { id: 'tar_gz', name: 'TAR GZ', desc: 'Linux Standard Archivierung', icon: 'box' },
-                { id: 'encrypt_zip', name: 'Verschlüsseltes ZIP', desc: 'Passwort: CloudHub123', icon: 'lock' },
-                { id: 'split_zip', name: 'Split Archive', desc: 'Teilt ZIP in 10MB Parts', icon: 'scissors' }
+                { id: 'zip_all', name: 'ZIP Kompression', icon: 'package' },
+                { id: 'rar_to_zip', name: 'RAR zu ZIP', icon: 'file-archive' },
+                { id: 'encrypt_zip', name: 'Passwort-ZIP (Secure)', icon: 'lock' }
             ],
             IMAGE_ENGINE: [
-                { id: 'webp_80', name: 'WebP Optimizer', desc: '80% Qualität, wenig MB', icon: 'zap' },
-                { id: 'webp_lossless', name: 'WebP Lossless', desc: '1:1 Qualität ohne Verlust', icon: 'camera' },
-                { id: 'resize_50', name: 'Skalierung 50%', desc: 'Halbiert Breite & Höhe', icon: 'minimize' },
-                { id: 'compress_jpg', name: 'JPG Stripper', desc: 'Entfernt Junk, spart Platz', icon: 'image' },
-                { id: 'grayscale', name: 'Schwarz-Weiß', desc: 'Künstlerischer Graufilter', icon: 'palette' },
-                { id: 'watermark', name: 'Wasserzeichen', desc: 'Fügt "OmniCloud" hinzu', icon: 'stamp' }
+                { id: 'webp_80', name: 'WebP Optimizer', icon: 'zap' },
+                { id: 'resize_50', name: 'Resize 50%', icon: 'minimize' },
+                { id: 'watermark', name: 'Add Watermark', icon: 'stamp' }
             ],
             VIDEO_AUDIO_LAB: [
-                { id: 'mp4_to_gif', name: 'Video zu GIF', desc: 'Erstellt animierte GIFs', icon: 'play' },
-                { id: 'extract_mp3', name: 'MP3 Extraktor', desc: 'Speichert nur den Ton', icon: 'music' },
-                { id: 'compress_video', name: 'Video Shrink', desc: 'H.265 Kompression', icon: 'video' },
-                { id: 'mute_video', name: 'Video Stummschalten', desc: 'Entfernt alle Tonspuren', icon: 'volume-x' },
-                { id: 'fast_motion', name: 'Zeitraffer x2', desc: 'Verdoppelt die Speed', icon: 'fast-forward' }
+                { id: 'mp4_to_gif', name: 'Video zu GIF', icon: 'play' },
+                { id: 'extract_mp3', name: 'Extract Audio', icon: 'music' },
+                { id: 'compress_video', name: 'Reduce Size (HEVC)', icon: 'video' }
             ],
             DOCUMENT_CONVERTER: [
-                { id: 'pdf_to_images', name: 'PDF zu PNG', desc: 'Jede Seite ein Bild', icon: 'copy' },
-                { id: 'pdf_merge', name: 'PDF Merger', desc: 'Verbindet alle PDFs', icon: 'plus-square' },
-                { id: 'pdf_compress', name: 'PDF Kompressor', desc: 'Macht Dokumente kleiner', icon: 'file-down' },
-                { id: 'md_to_pdf', name: 'Markdown zu PDF', desc: 'Schöner PDF-Export', icon: 'file-edit' },
-                { id: 'docx_to_pdf', name: 'Office zu PDF', desc: 'LibreOffice Engine', icon: 'file-text' }
-            ],
-            SECURITY_METADATA: [
-                { id: 'strip_exif', name: 'Exif Wiper', desc: 'Löscht GPS & Kamera-Daten', icon: 'eye-off' },
-                { id: 'show_info', name: 'Meta-Scanner', desc: 'Zeigt alle versteckten Daten', icon: 'search' },
-                { id: 'pdf_lock', name: 'PDF Passwort', desc: 'Sperrt Dokument mit Code', icon: 'key' }
+                { id: 'pdf_merge', name: 'Merge all PDFs', icon: 'layers' },
+                { id: 'docx_to_pdf', name: 'Docx zu PDF', icon: 'file-text' },
+                { id: 'pdf_compress', name: 'PDF Shrink', icon: 'file-down' }
             ]
         };
 
-        let currentCategory = 'ARCHIVE_TOOLS';
+        let activeCat = 'ARCHIVE_TOOLS';
+        let selectedTool = '';
+        let timerVal = 0;
+        let timerInterval;
 
-        function setCategory(cat, btn) {
-            currentCategory = cat;
-            
-            // UI Updates
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            if(btn) btn.classList.add('active');
+        // KEY MANAGEMENT
+        window.onload = () => {
+            const savedKey = localStorage.getItem('omnicloud_key');
+            if (!savedKey) {
+                document.getElementById('keyOverlay').classList.remove('hidden');
+            } else {
+                initApp();
+            }
+            document.getElementById('userRepoLabel').innerText = `${USER} / ${REPO}`;
+        };
 
-            document.getElementById('activeCategoryName').innerText = cat.replace('_', ' ');
-            document.getElementById('moduleCount').innerText = `${TOOLS[cat].length} MODULE`;
-            
-            // Icon wechseln
-            const iconMap = { ARCHIVE_TOOLS: 'archive', IMAGE_ENGINE: 'image', VIDEO_AUDIO_LAB: 'film', DOCUMENT_CONVERTER: 'file-text', SECURITY_METADATA: 'shield-check' };
-            const iconName = iconMap[cat];
-            const iconDisplay = document.getElementById('activeCategoryIcon');
-            iconDisplay.setAttribute('data-lucide', iconName);
-            
-            renderTools();
-            lucide.createIcons();
-        }
-
-        function renderTools() {
-            const grid = document.getElementById('toolsGrid');
-            grid.innerHTML = TOOLS[currentCategory].map(tool => `
-                <div onclick="selectTool('${tool.id}')" class="tool-btn glass-panel p-6 rounded-3xl cursor-pointer border border-white/5 group">
-                    <div class="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-600/20 transition">
-                        <i data-lucide="${tool.icon}" class="text-slate-400 group-hover:text-blue-500"></i>
-                    </div>
-                    <h4 class="font-bold text-sm mb-1">${tool.name}</h4>
-                    <p class="text-[11px] text-slate-500 leading-relaxed">${tool.desc}</p>
-                </div>
-            `).join('');
-            lucide.createIcons();
-        }
-
-        function selectTool(id) {
-            const url = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/actions/workflows/omnichub.yml`;
-            document.getElementById('actionTrigger').href = url;
-            
-            // Feedback
-            const n = document.createElement('div');
-            n.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-2xl animate-bounce z-[100]";
-            n.innerText = `Tool "${id}" bereit! Klicke auf "Task starten"`;
-            document.body.appendChild(n);
-            setTimeout(() => n.remove(), 3000);
-        }
-
-        async function refreshHistory() {
-            const list = document.getElementById('historyList');
-            try {
-                const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/releases`);
-                const data = await res.json();
-
-                if(!data || data.length === 0) {
-                    list.innerHTML = `<div class="p-10 text-center text-slate-600 italic">Noch keine Historie vorhanden.</div>`;
-                    return;
-                }
-
-                list.innerHTML = data.map(rel => `
-                    <div class="glass-panel p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 hover:border-blue-500/30 transition">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
-                                <i data-lucide="check-circle" class="text-green-500 w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-sm">${rel.name}</h4>
-                                <p class="text-[10px] mono text-slate-500 uppercase tracking-widest">Done: ${new Date(rel.created_at).toLocaleString()}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 w-full md:w-auto">
-                            <a href="${rel.assets[0]?.browser_download_url || '#'}" class="flex-1 md:flex-none bg-white text-black px-6 py-2 rounded-xl text-xs font-bold hover:bg-blue-500 hover:text-white transition flex items-center justify-center gap-2">
-                                <i data-lucide="download" class="w-3 h-3"></i> Datei laden
-                            </a>
-                        </div>
-                    </div>
-                `).join('');
-                lucide.createIcons();
-            } catch (e) {
-                list.innerHTML = `<div class="p-10 text-center text-red-500 font-bold">API-Limit erreicht oder Fehler.</div>`;
+        function saveKey() {
+            const key = document.getElementById('keyInput').value;
+            if (key.startsWith('ghp_')) {
+                localStorage.setItem('omnicloud_key', key);
+                document.getElementById('keyOverlay').classList.add('hidden');
+                initApp();
+            } else {
+                alert("Bitte einen gültigen GitHub Token (ghp_...) eingeben.");
             }
         }
 
-        // INIT
-        setCategory('ARCHIVE_TOOLS');
-        refreshHistory();
-        setInterval(refreshHistory, 60000); // Auto-Update alle Minute
+        function resetKey() {
+            localStorage.removeItem('omnicloud_key');
+            location.reload();
+        }
 
+        // APP LOGIC
+        function initApp() {
+            renderTools();
+            loadHistory();
+            lucide.createIcons();
+        }
+
+        function switchCategory(cat, btn) {
+            activeCat = cat;
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('catTitle').innerText = cat.replace('_', ' ');
+            renderTools();
+        }
+
+        function renderTools() {
+            const container = document.getElementById('toolsContainer');
+            container.innerHTML = TOOL_DB[activeCat].map(t => `
+                <div onclick="selectTool('${t.id}', this)" class="tool-option glass p-4 rounded-2xl cursor-pointer flex items-center gap-4 border border-white/5 hover:border-blue-500/50 transition">
+                    <div class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center">
+                        <i data-lucide="${t.icon}" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                    <span class="font-bold text-sm">${t.name}</span>
+                </div>
+            `).join('');
+            lucide.createIcons();
+            selectedTool = '';
+        }
+
+        function selectTool(id, el) {
+            document.querySelectorAll('.tool-option').forEach(o => o.classList.remove('border-blue-500'));
+            el.classList.add('border-blue-500');
+            selectedTool = id;
+        }
+
+        async function executeTask() {
+            if (!selectedTool) return alert("Wähle zuerst eine Operation!");
+            
+            const key = localStorage.getItem('omnicloud_key');
+            const btn = document.getElementById('runBtn');
+            const loader = document.getElementById('processingIndicator');
+
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            startTimer();
+
+            try {
+                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Accept': 'application/vnd.github+json',
+                    },
+                    body: JSON.stringify({
+                        ref: 'main',
+                        inputs: { category: activeCat, action_type: selectedTool }
+                    })
+                });
+
+                if (res.ok) {
+                    pollStatus(key);
+                } else {
+                    alert("API Fehler. Ist der Token noch gültig?");
+                    stopTask();
+                }
+            } catch (e) {
+                alert("Verbindungsfehler.");
+                stopTask();
+            }
+        }
+
+        function startTimer() {
+            timerVal = 0;
+            timerInterval = setInterval(() => {
+                timerVal++;
+                const m = Math.floor(timerVal/60).toString().padStart(2, '0');
+                const s = (timerVal%60).toString().padStart(2, '0');
+                document.getElementById('liveTimer').innerText = `${m}:${s}`;
+            }, 1000);
+        }
+
+        async function pollStatus(key) {
+            const check = async () => {
+                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/releases`, {
+                    headers: { 'Authorization': `Bearer ${key}` }
+                });
+                const data = await res.json();
+                const latest = data[0];
+                
+                if (latest && (new Date() - new Date(latest.created_at)) < 30000) {
+                    stopTask();
+                    loadHistory();
+                    notifySuccess();
+                } else {
+                    setTimeout(check, 5000);
+                }
+            };
+            check();
+        }
+
+        function stopTask() {
+            clearInterval(timerInterval);
+            document.getElementById('processingIndicator').classList.add('hidden');
+            document.getElementById('runBtn').disabled = false;
+        }
+
+        async function loadHistory() {
+            const container = document.getElementById('historyGrid');
+            const key = localStorage.getItem('omnicloud_key');
+            
+            try {
+                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/releases`, {
+                    headers: { 'Authorization': `Bearer ${key}` }
+                });
+                const data = await res.json();
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `<div class="col-span-full py-20 text-center glass rounded-3xl text-slate-600 italic">Keine Cloud-Ergebnisse gefunden.</div>`;
+                    return;
+                }
+
+                container.innerHTML = data.slice(0, 9).map(rel => `
+                    <div class="glass p-6 rounded-[2rem] border-l-4 border-blue-500 hover:scale-[1.02] transition duration-300">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 uppercase tracking-tighter">SUCCESS</span>
+                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${new Date(rel.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <h4 class="font-bold text-sm mb-4 truncate w-full">${rel.name}</h4>
+                        <a href="${rel.assets[0]?.browser_download_url || '#'}" class="w-full py-3 bg-white text-black rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white transition">
+                            <i data-lucide="download" class="w-3 h-3"></i> DOWNLOAD
+                        </a>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        function notifySuccess() {
+            const n = document.createElement('div');
+            n.className = "fixed top-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-10 py-5 rounded-3xl font-bold shadow-2xl z-[10000] animate-bounce";
+            n.innerHTML = `<div class="flex items-center gap-3"><i data-lucide="check-circle"></i> TASK COMPLETE! FILE READY.</div>`;
+            document.body.appendChild(n);
+            lucide.createIcons();
+            setTimeout(() => n.remove(), 4000);
+        }
     </script>
 
-    <style>
-        @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spin-slow 12s linear infinite; }
-    </style>
 </body>
 </html>
