@@ -1,0 +1,71 @@
+name: Universal Cloud Hub Task
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_type:
+        description: 'Was willst du tun?'
+        required: true
+        type: choice
+        options:
+          - 'ARCHIVE: Alle Dateien zu .zip'
+          - 'ARCHIVE: .rar zu .zip konvertieren'
+          - 'IMAGE: Alle zu WebP (80% Qualität)'
+          - 'IMAGE: Größe halbieren (50% Scale)'
+          - 'IMAGE: Schwarz-Weiß Filter'
+          - 'VIDEO: MP4 zu GIF'
+          - 'DOC: PDF zu Word (.docx)'
+          - 'DOC: Markdown zu PDF'
+      input_files:
+        description: 'Dateinamen in /input (oder leer lassen für alle)'
+        required: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick webp p7zip-full ffmpeg pandoc ghostscript unrar
+
+      - name: Execute Task
+        run: |
+          mkdir -p output
+          case "${{ github.event.inputs.task_type }}" in
+            "ARCHIVE: Alle Dateien zu .zip")
+              7z a -tzip output/archive.zip ./input/*
+              ;;
+            "ARCHIVE: .rar zu .zip konvertieren")
+              unrar x input/*.rar temp_unrar/
+              7z a -tzip output/converted_rar.zip ./temp_unrar/*
+              ;;
+            "IMAGE: Alle zu WebP (80% Qualität)")
+              for f in input/*.{jpg,png,jpeg}; do [ -e "$f" ] && cwebp -q 80 "$f" -o "output/$(basename "${f%.*}").webp"; done
+              ;;
+            "IMAGE: Größe halbieren (50% Scale)")
+              for f in input/*.{jpg,png,jpeg}; do [ -e "$f" ] && convert "$f" -resize 50% "output/resized_$(basename "$f")"; done
+              ;;
+            "VIDEO: MP4 zu GIF")
+              ffmpeg -i input/*.mp4 -vf "fps=10,scale=480:-1:flags=lanczos" output/video_to.gif
+              ;;
+            "DOC: PDF zu Word (.docx)")
+              pandoc input/*.pdf -o output/document.docx
+              ;;
+          esac
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: task-${{ github.run_number }}
+          name: Fertiger Task #${{ github.run_number }}
+          files: output/*
+          body: "Dein Auftrag wurde bearbeitet: ${{ github.event.inputs.task_type }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
